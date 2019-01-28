@@ -56,12 +56,9 @@ public class MybatisGeneratorBridge {
         Configuration configuration = new Configuration();
         Context context = new Context(ModelType.CONDITIONAL);
         configuration.addContext(context);
-	    
-		context.addProperty("autoDelimitKeywords", "true");
-        context.addProperty("beginningDelimiter", "`");
-        context.addProperty("endingDelimiter", "`");
-	    
+		
         context.addProperty("javaFileEncoding", "UTF-8");
+        
 		String dbType = selectedDatabaseConfig.getDbType();
 		String connectorLibPath = ConfigHelper.findConnectorLibPath(dbType);
 	    _LOG.info("connectorLibPath: {}", connectorLibPath);
@@ -77,9 +74,13 @@ public class MybatisGeneratorBridge {
             tableConfig.setSelectByExampleStatementEnabled(false);
         }
 
+		context.addProperty("autoDelimitKeywords", "true");
 		if (DbType.MySQL.name().equals(dbType) || DbType.MySQL_8.name().equals(dbType)) {
 			tableConfig.setSchema(selectedDatabaseConfig.getSchema());
-        } else {
+			// 由于beginningDelimiter和endingDelimiter的默认值为双引号(")，在Mysql中不能这么写，所以还要将这两个默认值改为`
+			context.addProperty("beginningDelimiter", "`");
+			context.addProperty("endingDelimiter", "`");
+		} else {
             tableConfig.setCatalog(selectedDatabaseConfig.getSchema());
 	    }
         if (generatorConfig.isUseSchemaPrefix()) {
@@ -136,7 +137,6 @@ public class MybatisGeneratorBridge {
         }
 
         JDBCConnectionConfiguration jdbcConfig = new JDBCConnectionConfiguration();
-        // http://www.mybatis.org/generator/usage/mysql.html
         if (DbType.MySQL.name().equals(dbType) || DbType.MySQL_8.name().equals(dbType)) {
 	        jdbcConfig.addProperty("nullCatalogMeansCurrent", "true");
         }
@@ -144,6 +144,9 @@ public class MybatisGeneratorBridge {
         jdbcConfig.setConnectionURL(DbUtil.getConnectionUrlWithSchema(selectedDatabaseConfig));
         jdbcConfig.setUserId(selectedDatabaseConfig.getUsername());
         jdbcConfig.setPassword(selectedDatabaseConfig.getPassword());
+        if(DbType.Oracle.name().equals(dbType)){
+            jdbcConfig.getProperties().setProperty("remarksReporting", "true");
+        }
         // java model
         JavaModelGeneratorConfiguration modelConfig = new JavaModelGeneratorConfiguration();
         modelConfig.setTargetPackage(generatorConfig.getModelPackage());
@@ -161,7 +164,6 @@ public class MybatisGeneratorBridge {
 
         context.setId("myid");
         context.addTableConfiguration(tableConfig);
-        context.setJdbcConnectionConfiguration(jdbcConfig);
         context.setJdbcConnectionConfiguration(jdbcConfig);
         context.setJavaModelGeneratorConfiguration(modelConfig);
         context.setSqlMapGeneratorConfiguration(mapperConfig);
@@ -197,7 +199,7 @@ public class MybatisGeneratorBridge {
         }
         // limit/offset插件
         if (generatorConfig.isOffsetLimit()) {
-            if (DbType.MySQL.name().equals(dbType)
+            if (DbType.MySQL.name().equals(dbType) || DbType.MySQL_8.name().equals(dbType)
 		            || DbType.PostgreSQL.name().equals(dbType)) {
                 PluginConfiguration pluginConfiguration = new PluginConfiguration();
                 pluginConfiguration.addProperty("type", "com.zzg.mybatis.generator.plugins.MySQLLimitPlugin");

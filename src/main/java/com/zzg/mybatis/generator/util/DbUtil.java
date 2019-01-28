@@ -48,7 +48,7 @@ public class DbUtil {
 		    DatabaseMetaData md = connection.getMetaData();
 		    ResultSet rs;
 		    if (DbType.valueOf(config.getDbType()) == DbType.SQL_Server) {
-			    String sql = "select name from sysobjects  where xtype='u' or xtype='v' ";
+			    String sql = "select name from sysobjects  where xtype='u' or xtype='v' order by name";
 			    rs = connection.createStatement().executeQuery(sql);
 			    while (rs.next()) {
 				    tables.add(rs.getString("name"));
@@ -71,6 +71,10 @@ public class DbUtil {
 		    while (rs.next()) {
 			    tables.add(rs.getString(3));
 		    }
+
+		    if (tables.size()>1) {
+		    	Collections.sort(tables);
+			}
 		    return tables;
 	    } finally {
 	    	connection.close();
@@ -83,7 +87,7 @@ public class DbUtil {
 		Connection conn = getConnection(dbConfig);
 		try {
 			DatabaseMetaData md = conn.getMetaData();
-			ResultSet rs = md.getColumns(null, null, tableName, null);
+			ResultSet rs = md.getColumns(dbConfig.getSchema(), null, tableName, null);
 			List<UITableColumnVO> columns = new ArrayList<>();
 			while (rs.next()) {
 				UITableColumnVO columnVO = new UITableColumnVO();
